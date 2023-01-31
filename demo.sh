@@ -5,16 +5,16 @@ export HADOOP_HOME=/usr/local/hadoop
 export PATH=${PATH}:${HADOOP_HOME}/bin:${JAVA_HOME}/bin
 export LIBRARY_PATH=${LIBRARY_PATH}:${HADOOP_HOME}/lib/native
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${JAVA_HOME}/jre/lib/amd64/server:${HADOOP_HOME}/lib/native:/usr/local/cuda-10.0/extras/CUPTI/lib64
-source $HADOOP_HOME/libexec/hadoop-config.sh
+#source $HADOOP_HOME/libexec/hadoop-config.sh
 export PYTHONPATH="/opt/conda/lib/python3.6/site-packages"
-export CLASSPATH=$($HADOOP_HOME/bin/hadoop classpath --glob)
+#export CLASSPATH=$($HADOOP_HOME/bin/hadoop classpath --glob)
 
-hvd_size=4
+hvd_size=1
 mode=$1 # ['train', 'test', 'train_test']
 
-root_data_dir=../
-train_dir="train_valid"
-test_dir="test"
+root_data_dir=./data/
+train_dir="MINDlarge_train"
+test_dir="MINDlarge_test"
 dataset="MIND"
 
 epoch=2
@@ -36,11 +36,18 @@ filter_num=1
 mask_uet_bing_rate=0.8
 npratio=4
 
+tokenizer_name='../fastformer-for-rec/pre_trained/cnndm.unilm2-large-cased/vocab.txt'
+config_name='../fastformer-for-rec/pre_trained/cnndm.unilm2-large-cased/config.json'
+# enable_hvd=False # assertion error
+model_name_or_path='../fastformer-for-rec/pre_trained/cnndm.unilm2-large-cased/pytorch_model.bin'
+filename_pat='behaviors.tsv'
+
+
 
 
 if [ ${mode} == train ] 
 then
-    mpirun -np ${hvd_size} -H localhost:${hvd_size} \
+    #mpirun -np ${hvd_size} -H localhost:${hvd_size} \
     python run.py --root_data_dir ${root_data_dir} \
     --mode ${mode} --epoch ${epoch} --dataset ${dataset} \
     --model_dir ${model_dir}  --batch_size ${batch_size} \
@@ -49,12 +56,14 @@ then
     --user_log_mask ${user_log_mask} --use_padded_news_embedding ${use_padded_news_embedding} \
     --train_dir ${train_dir} --test_dir ${test_dir} --save_steps ${save_steps} \
     --filter_num ${filter_num} --max_steps_per_epoch ${max_steps_per_epoch} \
-    --npratio ${npratio}  --num_attention_heads ${num_attention_heads}
+    --npratio ${npratio}  --num_attention_heads ${num_attention_heads} \
+    --tokenizer_name ${tokenizer_name} --config_name ${config_name} \
+    --model_name_or_path ${model_name_or_path} --filename_pat ${filename_pat}
 elif [ ${mode} == test ]
 then
     batch_size=32
     log_steps=100
-    load_ckpt_name=${11}
+    load_ckpt_name=${1}
     CUDA_LAUNCH_BLOCKING=1 python run.py --root_data_dir ${root_data_dir} \
     --mode ${mode} --epoch ${epoch} --dataset ${dataset} \
     --model_dir ${model_dir}  --batch_size ${batch_size} \

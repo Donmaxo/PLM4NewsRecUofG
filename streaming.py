@@ -48,6 +48,8 @@ def get_worker_files(dirname,
 
 class StreamReader:
     def __init__(self, data_paths, batch_size, shuffle=False, shuffle_buffer_size=1000):
+        # update for new TF
+        tf.compat.v1.disable_eager_execution()
         tf.config.experimental.set_visible_devices([], device_type="GPU")
         # logging.info(f"visible_devices:{tf.config.experimental.get_visible_devices()}")
         path_len = len(data_paths)
@@ -70,7 +72,8 @@ class StreamReader:
 
         dataset = dataset.batch(batch_size)
         dataset = dataset.prefetch(1)
-        self.next_batch = dataset.make_one_shot_iterator().get_next()
+        # update for new TF
+        self.next_batch = tf.compat.v1.data.make_one_shot_iterator(dataset).get_next()
         self.session = None
 
     def _process_record(self, record):
@@ -89,7 +92,8 @@ class StreamReader:
         # print(f"StreamReader reset(), {self.session}, pid:{threading.currentThread()}")
         if self.session:
             self.session.close()
-        self.session = tf.Session()
+        # update for new TF
+        self.session = tf.compat.v1.Session()
         self.endofstream = False
 
     def get_next(self):

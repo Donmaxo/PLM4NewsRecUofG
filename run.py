@@ -128,7 +128,7 @@ def train(args):
         news_combined=news_combined,
         word_dict=word_dict,
         data_dir=os.path.join(args.root_data_dir,
-                            f'{args.market}/{args.train_dir}'),
+                            f'{args.dataset}/{args.train_dir}'),
         filename_pat=args.filename_pat,
         args=args,
         world_size=hvd_size,
