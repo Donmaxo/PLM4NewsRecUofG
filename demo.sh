@@ -36,10 +36,16 @@ filter_num=1
 mask_uet_bing_rate=0.8
 npratio=4
 
-tokenizer_name='../fastformer-for-rec/pre_trained/cnndm.unilm2-large-cased/vocab.txt'
-config_name='../fastformer-for-rec/pre_trained/cnndm.unilm2-large-cased/config.json'
+# tokenizer_name='../fastformer-for-rec/pre_trained/cnndm.unilm2-large-cased/vocab.txt'
+# config_name='../fastformer-for-rec/pre_trained/cnndm.unilm2-large-cased/config.json'
+# # enable_hvd=False # assertion error
+# model_name_or_path='../fastformer-for-rec/pre_trained/cnndm.unilm2-large-cased/pytorch_model.bin'
+# filename_pat='behaviors.tsv'
+
+tokenizer_name='../fastformer-for-rec/pre_trained/unilm2-base-uncased-vocab.txt'
+config_name='../fastformer-for-rec/pre_trained/unilm2-base-uncased-config.json'
 # enable_hvd=False # assertion error
-model_name_or_path='../fastformer-for-rec/pre_trained/cnndm.unilm2-large-cased/pytorch_model.bin'
+model_name_or_path='../fastformer-for-rec/pre_trained/unilm2-base-uncased.bin'
 filename_pat='behaviors.tsv'
 
 
@@ -63,7 +69,8 @@ elif [ ${mode} == test ]
 then
     batch_size=32
     log_steps=100
-    load_ckpt_name=${1}
+    load_ckpt_name=${4}
+    echo $load_ckpt_name
     CUDA_LAUNCH_BLOCKING=1 python run.py --root_data_dir ${root_data_dir} \
     --mode ${mode} --epoch ${epoch} --dataset ${dataset} \
     --model_dir ${model_dir}  --batch_size ${batch_size} \

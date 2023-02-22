@@ -14,6 +14,7 @@ from dataloader import DataLoaderTrain, DataLoaderTest
 from torch.utils.data import Dataset, DataLoader
 from preprocess import read_news, read_news_bert, get_doc_input, get_doc_input_bert
 from model_bert import ModelBert
+from model_fastformer import ModelFastformer
 from parameters import parse_args
 
 from transformers import AutoTokenizer, AutoModel, AutoConfig
@@ -104,7 +105,7 @@ def train(args):
             news_category, news_domain, news_subcategory]
         if x is not None], axis=1)
     
-    model = ModelBert(args, bert_model, len(category_dict), len(domain_dict), len(subcategory_dict))
+    model = ModelFastformer(args, bert_model, len(category_dict), len(domain_dict), len(subcategory_dict))
     word_dict = None
     
     if args.enable_gpu:
@@ -143,7 +144,7 @@ def train(args):
     for ep in range(args.epochs):
         loss = 0.0
         accuary = 0.0
-        for cnt, (log_ids, log_mask, input_ids, targets) in enumerate(dataloader):
+        for cnt, (log_ids, log_mask, input_ids, targets) in tqdm(enumerate(dataloader)):
             if cnt > args.max_steps_per_epoch:
                 break
 
@@ -167,7 +168,7 @@ def train(args):
                         accuary / cnt))
             
             # save model minibatch
-            print(hvd_rank,cnt,args.save_steps,cnt%args.save_steps)
+            # print(hvd_rank,cnt,args.save_steps,cnt%args.save_steps)
             if hvd_rank == 0 and cnt % args.save_steps == 0:
                 ckpt_path = os.path.join(args.model_dir, f'epoch-{ep+1}-{cnt}.pt')
                 torch.save(
@@ -212,8 +213,10 @@ def test(args):
         ckpt_path = utils.get_checkpoint(args.model_dir, args.load_ckpt_name)
     else:
         ckpt_path = utils.latest_checkpoint(args.model_dir)
+        
 
     assert ckpt_path is not None, 'No ckpt found'
+    print(f'checkpoint path {ckpt_path}')
     checkpoint = torch.load(ckpt_path)
 
     if 'subcategory_dict' in checkpoint:
@@ -226,12 +229,13 @@ def test(args):
     domain_dict = checkpoint['domain_dict']
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
     config = AutoConfig.from_pretrained("bert-base-uncased", output_hidden_states=True)
+    config.num_hidden_layers = 8
     bert_model = AutoModel.from_pretrained("bert-base-uncased",config=config)
     model = ModelBert(args, bert_model, len(category_dict), len(domain_dict), len(subcategory_dict))
     
     if args.enable_gpu:
         model.cuda()
-
+    # print(f"\n\n\n{checkpoint['model_state_dict'].keys()}\n\n\n\n", config, "\n\n\n")
     model.load_state_dict(checkpoint['model_state_dict'])
     logging.info(f"Model loaded from {ckpt_path}")
 
@@ -243,7 +247,7 @@ def test(args):
 
     news, news_index, category_dict, domain_dict, subcategory_dict = read_news_bert(
         os.path.join(args.root_data_dir,
-                    f'{args.market}/{args.test_dir}/news.tsv'), 
+                    f'{args.dataset}/{args.test_dir}/news.tsv'), 
         args,
         tokenizer
     )
@@ -303,7 +307,7 @@ def test(args):
         word_dict=word_dict,
         news_bias_scoring= None,
         data_dir=os.path.join(args.root_data_dir,
-                            f'{args.market}/{args.test_dir}'),
+                            f'{args.dataset}/{args.test_dir}'),
         filename_pat=args.filename_pat,
         args=args,
         world_size=hvd_size,
